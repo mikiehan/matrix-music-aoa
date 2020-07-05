@@ -4,6 +4,7 @@
  */
 
 #include <fftw3.h>
+#include <gflags/gflags.h>
 #include <stdint.h>
 #include <string.h>
 #include <wiringPi.h>
@@ -16,8 +17,12 @@
 #include "../cpp/driver/direction_of_arrival.h"
 #include "../cpp/driver/everloop.h"
 #include "../cpp/driver/everloop_image.h"
+#include "../cpp/driver/matrixio_bus.h"
 #include "../cpp/driver/microphone_array.h"
-#include "../cpp/driver/wishbone_bus.h"
+#include "../cpp/driver/microphone_core.h"
+
+DEFINE_bool(big_menu, true, "Include 'advanced' options in the menu listing");
+DEFINE_int32(sampling_frequency, 16000, "Sampling Frequency");
 
 namespace hal = matrix_hal;
 
@@ -25,22 +30,39 @@ int led_offset[] = {23, 27, 32, 1, 6, 10, 14, 19};
 int lut[] = {1, 2, 10, 200, 10, 2, 1};
 
 int main() {
-  hal::WishboneBus bus;
-  bus.SpiInit();
 
-  hal::MicrophoneArray mics;
-  mics.Setup(&bus);
+  google::ParseCommandLineFlags(&argc, &agrv, true);
+
+  hal::MatrixIOBus bus;
+  if (!bus.Init()) return false;
+
+  if (!bus.IsDirectBus()) {
+    std::cerr << "Kernel Modules has been loaded. Use ALSA examples "
+              << std::endl;
+  }
+
+  int sampling_rate = FLAGS_sampling_frequency;
 
   hal::Everloop everloop;
   everloop.Setup(&bus);
 
-  hal::EverloopImage image1d;
+  hal::EverloopImage image1d(bus.MatrixLeds());
+
+  hal::MicrophoneArray mics;
+  mics.Setup(&bus);
+  mics.SetSamplingRate(sampling_rate);
+  mics.ShowConfiguration();
+
+  hal::MicrophoneCore mic_core(mics);
+  mic_core.Setup(&bus);
 
   hal::DirectionOfArrival doa(mics);
+  doa.Init();
 
   float azimutal_angle;
   float polar_angle;
   int mic;
+
 
   doa.steeringVectorCalculate();
 
