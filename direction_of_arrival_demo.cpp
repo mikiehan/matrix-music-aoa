@@ -29,7 +29,7 @@ namespace hal = matrix_hal;
 int led_offset[] = {23, 27, 32, 1, 6, 10, 14, 19};
 int lut[] = {1, 2, 10, 200, 10, 2, 1};
 
-int main() {
+int main(int argc, char *agrv[]) {
 
   google::ParseCommandLineFlags(&argc, &agrv, true);
 
